@@ -1,6 +1,6 @@
 # 🛡️ Cybersecurity Threat Intelligence System
 
-[![Cybersecurity Threats]](https://fortifydata.com/wp-content/uploads/8-main-cyber-security-threats-scaled.jpg)
+[![Cybersecurity Threats]](https://www.miniorange.com/blog/assets/2025/types-of-cyber-threats.webp)
 ![!Cyber Attacks](https://www.skillcast.com/hubfs/cyberattack_1200x627.jpg)
 [![Neo4j](https://img.shields.io/badge/Database-Neo4j-008CC1?style=flat-square&logo=neo4j)](https://neo4j.com/)
 [![Pydantic-AI](https://img.shields.io/badge/Agent-Pydantic--AI-FF6F00?style=flat-square)](https://github.com/pydantic/pydantic-ai)
