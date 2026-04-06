@@ -250,6 +250,29 @@ def get_background_loop() -> asyncio.AbstractEventLoop:
     t = threading.Thread(target=_run, args=(loop,), daemon=True)
     t.start()
     return loop
+    
+
+def fix_neo4j_episodes_property(uri, user, password, database):
+    """
+    Ensures the 'episodes' property key is registered in Neo4j metadata.
+    This eliminates the 'property key does not exist' warning from graphiti-core.
+    """
+    cypher = """
+    MERGE (n:_SchemaTouch {target: 'relationship_episodes'})
+    ON CREATE SET n.episodes = []
+    WITH n
+    MATCH (a)-[r:RELATES_TO]->(b)
+    WHERE r.episodes IS NULL
+    SET r.episodes = []
+    DETACH DELETE n
+    """
+    try:
+        driver = GraphDatabase.driver(uri, auth=(user, password))
+        with driver.session(database=database if database else None) as session:
+            session.run(cypher)
+        driver.close()
+    except Exception:
+        pass # Schema fix is non-critical, don't crash the app if it fails
 
 
 def run_async(coro):
@@ -267,6 +290,9 @@ def initialize_backend() -> dict:
     so every subsequent query also runs there — no cross-loop collisions.
     """
     async def _init():
+        # First, ensure the 'episodes' property exists in Neo4j metadata to avoid warnings
+        fix_neo4j_episodes_property(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, NEO4J_DATABASE)
+
         # Initialize with explicit Neo4jDriver to handle Aura's routing issues
         driver = Neo4jDriver(
             uri=NEO4J_URI,
