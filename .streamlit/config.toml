@@ -1,0 +1,9 @@
+[theme]
+# Let Streamlit auto-detect system preference; user can also toggle in hamburger menu
+base = "light"
+
+primaryColor = "#0a66c2"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f0f2f5"
+textColor = "#1c1c1e"
+font = "sans serif"
