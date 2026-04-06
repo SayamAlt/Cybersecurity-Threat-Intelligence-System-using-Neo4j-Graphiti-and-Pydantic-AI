@@ -4,6 +4,7 @@ from rich.markdown import Markdown
 from rich.live import Live
 from graphiti_core import Graphiti
 from graphiti_core.driver.neo4j_driver import Neo4jDriver
+from core.aura_api import ensure_aura_instance_running
 from ingestion.fetch_cve_rss_data import fetch_critical_cve_data, fetch_security_rss_feeds
 from ingestion.graph_ingestion import ingest_cve_data, ingest_rss_feed
 from ingestion.rag_ingestion import build_rag_pipeline
@@ -35,6 +36,22 @@ def fix_neo4j_episodes_property(uri, user, password, database):
 
 async def main():
     console = Console()
+
+    # Handle Aura instance resumption if credentials are provided in .env
+    client_id = os.getenv("AURA_CLIENT_ID")
+    client_secret = os.getenv("AURA_CLIENT_SECRET")
+    instance_id = os.getenv("AURA_INSTANCE_ID")
+
+    if all([client_id, client_secret, instance_id]):
+        console.print("[cyan]🔗 Checking Neo4j Aura database status...[/cyan]")
+        def _cb(s):
+            console.print(f"[dim]Current Status: [bold]{s}[/bold][/dim]")
+            
+        success = ensure_aura_instance_running(client_id, client_secret, instance_id, status_callback=_cb)
+        if success:
+            console.print("[bold green]✅ Database is Online[/bold green]")
+        else:
+            console.print("[bold yellow]⚠️ Proceeding, but database status is unclear.[/bold yellow]")
 
     # First, ensure the 'episodes' property exists in Neo4j metadata to avoid warnings
     fix_neo4j_episodes_property(

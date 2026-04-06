@@ -30,6 +30,11 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
 NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Aura API configuration
+AURA_CLIENT_ID = os.getenv("AURA_CLIENT_ID")
+AURA_CLIENT_SECRET = os.getenv("AURA_CLIENT_SECRET")
+AURA_INSTANCE_ID = os.getenv("AURA_INSTANCE_ID")
+
 if not OPENAI_API_KEY:
     st.error("⚠️ OpenAI API Key missing. Please set it in .env or Streamlit secrets.")
     st.stop()
@@ -37,6 +42,7 @@ if not OPENAI_API_KEY:
 # Graph / Agent imports
 from graphiti_core import Graphiti
 from graphiti_core.driver.neo4j_driver import Neo4jDriver
+from core.aura_api import ensure_aura_instance_running
 from ingestion.fetch_cve_rss_data import fetch_critical_cve_data, fetch_security_rss_feeds
 from ingestion.graph_ingestion import ingest_cve_data, ingest_rss_feed
 from ingestion.rag_ingestion import build_rag_pipeline
@@ -290,6 +296,30 @@ def initialize_backend() -> dict:
     so every subsequent query also runs there — no cross-loop collisions.
     """
     async def _init():
+        # Handle Aura instance resumption if credentials are provided
+        if all([AURA_CLIENT_ID, AURA_CLIENT_SECRET, AURA_INSTANCE_ID]):
+            def update_status(status):
+                if status == "paused":
+                    st.info("⚡ Neo4j Aura is currently paused. Resuming now...")
+                elif status == "resuming":
+                    # Status is resuming, wait quietly or update text
+                    pass
+                elif "error" in str(status):
+                    st.warning(f"⚠️ Aura API Issue: {status}")
+
+            with st.status("🔗 Synchronizing with Neo4j Aura Cloud...", expanded=True) as status_box:
+                status_box.write("Checking database status...")
+                success = ensure_aura_instance_running(
+                    AURA_CLIENT_ID, 
+                    AURA_CLIENT_SECRET, 
+                    AURA_INSTANCE_ID,
+                    status_callback=lambda s: status_box.write(f"Database status: **{s}**")
+                )
+                if success:
+                    status_box.update(label="✅ Neo4j Aura is Online", state="complete", expanded=False)
+                else:
+                    status_box.update(label="⚠️ Database initialization status unclear", state="error")
+
         # First, ensure the 'episodes' property exists in Neo4j metadata to avoid warnings
         fix_neo4j_episodes_property(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, NEO4J_DATABASE)
 
