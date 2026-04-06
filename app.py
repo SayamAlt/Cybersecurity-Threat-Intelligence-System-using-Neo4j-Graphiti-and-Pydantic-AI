@@ -296,30 +296,6 @@ def initialize_backend() -> dict:
     so every subsequent query also runs there — no cross-loop collisions.
     """
     async def _init():
-        # Handle Aura instance resumption if credentials are provided
-        if all([AURA_CLIENT_ID, AURA_CLIENT_SECRET, AURA_INSTANCE_ID]):
-            def update_status(status):
-                if status == "paused":
-                    st.info("⚡ Neo4j Aura is currently paused. Resuming now...")
-                elif status == "resuming":
-                    # Status is resuming, wait quietly or update text
-                    pass
-                elif "error" in str(status):
-                    st.warning(f"⚠️ Aura API Issue: {status}")
-
-            with st.status("🔗 Synchronizing with Neo4j Aura Cloud...", expanded=True) as status_box:
-                status_box.write("Checking database status...")
-                success = ensure_aura_instance_running(
-                    AURA_CLIENT_ID, 
-                    AURA_CLIENT_SECRET, 
-                    AURA_INSTANCE_ID,
-                    status_callback=lambda s: status_box.write(f"Database status: **{s}**")
-                )
-                if success:
-                    status_box.update(label="✅ Neo4j Aura is Online", state="complete", expanded=False)
-                else:
-                    status_box.update(label="⚠️ Database initialization status unclear", state="error")
-
         # First, ensure the 'episodes' property exists in Neo4j metadata to avoid warnings
         fix_neo4j_episodes_property(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, NEO4J_DATABASE)
 
@@ -506,6 +482,36 @@ def render_knowledge_graph():
         st.error(f"⚠️ Graph render failed. Ensure Neo4j is running.\n\n`{e}`")
 
 # Boot backend
+if all([AURA_CLIENT_ID, AURA_CLIENT_SECRET, AURA_INSTANCE_ID]):
+    if "aura_instance_checked" not in st.session_state:
+        # Perform Aura instance management on the MAIN thread to avoid NoneType errors
+        with st.status("🔗 Synchronizing with Neo4j Aura Cloud...", expanded=True) as status_box:
+            status_box.write("Checking database status via Aura API...")
+            
+            # Using a simplified status reporter to avoid thread safety issues
+            def report_status(s):
+                if s == "paused":
+                    status_box.write("⚡ Neo4j Aura is currently **paused**. Starting it now...")
+                elif s == "resuming":
+                    status_box.write("🔄 Database is **resuming**... please wait (2-4 mins).")
+                elif "error" in str(s).lower():
+                    status_box.write(f"⚠️ **Aura API Issue**: {s}")
+                else:
+                    status_box.write(f"Neo4j Aura current status: **{s}**")
+
+            success = ensure_aura_instance_running(
+                AURA_CLIENT_ID, 
+                AURA_CLIENT_SECRET, 
+                AURA_INSTANCE_ID,
+                status_callback=report_status
+            )
+            
+            if success:
+                status_box.update(label="✅ Neo4j Aura is Online", state="complete", expanded=False)
+                st.session_state.aura_instance_checked = True 
+            else:
+                status_box.update(label="⚠️ Aura initialization taking longer than expected", state="error")
+
 with st.spinner("🔌 Connecting to Cyber Threat Intelligence Network..."):
     backend = initialize_backend()
 
