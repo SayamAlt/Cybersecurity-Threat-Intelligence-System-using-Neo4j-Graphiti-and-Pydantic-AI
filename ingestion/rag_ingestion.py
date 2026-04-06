@@ -5,10 +5,14 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.caches import InMemoryCache
 from dotenv import load_dotenv
 import os
+import streamlit as st
 
 load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "No API Key Found")
+if "OPENAI_API_KEY" in st.secrets["secrets"]:
+    OPENAI_API_KEY = st.secrets["secrets"].get("OPENAI_API_KEY", "No OpenAI API key found.")
+else:
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "No API Key Found")
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5, api_key=OPENAI_API_KEY, cache=InMemoryCache())
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=OPENAI_API_KEY)

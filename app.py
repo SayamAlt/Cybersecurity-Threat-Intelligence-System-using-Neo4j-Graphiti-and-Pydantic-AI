@@ -1,8 +1,24 @@
 import streamlit as st
-import os
-import asyncio
-import threading
+import os, asyncio, threading
 from datetime import datetime, timezone
+from dotenv import load_dotenv
+
+load_dotenv()
+
+if "NEO4J_URI" in st.secrets["secrets"]:
+    NEO4J_URI = st.secrets["secrets"].get("NEO4J_URI", "bolt://localhost:7687")
+else:
+    NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+
+if "NEO4J_USER" in st.secrets["secrets"]:
+    NEO4J_USER = st.secrets["secrets"].get("NEO4J_USER", "neo4j")
+else:
+    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+
+if "NEO4J_PASSWORD" in st.secrets["secrets"]:
+    NEO4J_PASSWORD = st.secrets["secrets"].get("NEO4J_PASSWORD", "password")
+else:
+    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
 
 # Graph / Agent imports
 from graphiti_core import Graphiti
@@ -237,9 +253,9 @@ def initialize_backend() -> dict:
     """
     async def _init():
         graphiti = Graphiti(
-            uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
-            user=os.getenv("NEO4J_USER", "neo4j"),
-            password=os.getenv("NEO4J_PASSWORD", "password")
+            uri=NEO4J_URI,
+            user=NEO4J_USER,
+            password=NEO4J_PASSWORD
         )
 
         try:
@@ -313,7 +329,7 @@ def run_agent_query(prompt: str, history: list, deps: AgentDependencies, placeho
 
     # Drain queue on the MAIN Streamlit thread
     displayed = ""
-    
+
     while True:
         chunk = chunk_queue.get() # blocks until next chunk or sentinel
         if chunk is None:
