@@ -25,7 +25,9 @@ class GraphitiSearchResult(BaseModel):
     source: Optional[str] = None
     
 def get_model() -> OpenAIChatModel:
-    api_key = os.getenv("OPENAI_API_KEY", "No API Key Found")
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY is not set in environment or st.secrets")
     return OpenAIChatModel(model_name="gpt-4o-mini", provider=OpenAIProvider(api_key=api_key))
 
 agent = Agent(

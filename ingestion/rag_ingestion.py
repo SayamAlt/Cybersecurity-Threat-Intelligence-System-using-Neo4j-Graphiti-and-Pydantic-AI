@@ -9,10 +9,7 @@ import streamlit as st
 
 load_dotenv()
 
-if "OPENAI_API_KEY" in st.secrets["secrets"]:
-    OPENAI_API_KEY = st.secrets["secrets"].get("OPENAI_API_KEY", "No OpenAI API key found.")
-else:
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "No API Key Found")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5, api_key=OPENAI_API_KEY, cache=InMemoryCache())
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small", api_key=OPENAI_API_KEY)

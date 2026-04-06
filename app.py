@@ -5,20 +5,33 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-if "NEO4J_URI" in st.secrets["secrets"]:
-    NEO4J_URI = st.secrets["secrets"].get("NEO4J_URI", "bolt://localhost:7687")
-else:
-    NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+def sync_secrets():
+    """
+    Sync Streamlit secrets to os.environ for compatibility with libraries 
+    like graphiti_core and pydantic-ai that expect environment variables.
+    """
+    # Check for [secrets] section
+    if "secrets" in st.secrets:
+        for key, value in st.secrets["secrets"].items():
+            if key not in os.environ:
+                os.environ[key] = str(value)
+    
+    # Also check top-level secrets
+    for key, value in st.secrets.items():
+        if key != "secrets" and key not in os.environ:
+            os.environ[key] = str(value)
 
-if "NEO4J_USER" in st.secrets["secrets"]:
-    NEO4J_USER = st.secrets["secrets"].get("NEO4J_USER", "neo4j")
-else:
-    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+sync_secrets()
 
-if "NEO4J_PASSWORD" in st.secrets["secrets"]:
-    NEO4J_PASSWORD = st.secrets["secrets"].get("NEO4J_PASSWORD", "password")
-else:
-    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+# Core Configuration
+NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not OPENAI_API_KEY:
+    st.error("⚠️ OpenAI API Key missing. Please set it in .env or Streamlit secrets.")
+    st.stop()
 
 # Graph / Agent imports
 from graphiti_core import Graphiti
