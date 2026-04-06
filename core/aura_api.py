@@ -21,13 +21,21 @@ class AuraManager:
         if self.access_token and time.time() < self.token_expiry:
             return self.access_token
         
-        url = f"{self.base_url}/oauth/token"
+        # The token endpoint is at the root and NOT under /v1
+        auth_url = "https://api.neo4j.io/oauth/token"
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        
         response = requests.post(
-            url,
+            auth_url,
             auth=(self.client_id, self.client_secret),
-            data={"grant_type": "client_credentials"}
+            data={"grant_type": "client_credentials"},
+            headers=headers
         )
-        response.raise_for_status()
+        
+        if response.status_code != 200:
+            # Include more detailed error feedback from the API response
+            raise Exception(f"OAuth Token Error ({response.status_code}): {response.text}")
+        
         
         data = response.json()
         self.access_token = data["access_token"]
