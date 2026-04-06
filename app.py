@@ -27,6 +27,7 @@ sync_secrets()
 NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4j")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not OPENAI_API_KEY:
@@ -35,6 +36,7 @@ if not OPENAI_API_KEY:
 
 # Graph / Agent imports
 from graphiti_core import Graphiti
+from graphiti_core.driver.neo4j_driver import Neo4jDriver
 from ingestion.fetch_cve_rss_data import fetch_critical_cve_data, fetch_security_rss_feeds
 from ingestion.graph_ingestion import ingest_cve_data, ingest_rss_feed
 from ingestion.rag_ingestion import build_rag_pipeline
@@ -265,11 +267,14 @@ def initialize_backend() -> dict:
     so every subsequent query also runs there — no cross-loop collisions.
     """
     async def _init():
-        graphiti = Graphiti(
+        # Initialize with explicit Neo4jDriver to handle Aura's routing issues
+        driver = Neo4jDriver(
             uri=NEO4J_URI,
             user=NEO4J_USER,
-            password=NEO4J_PASSWORD
+            password=NEO4J_PASSWORD,
+            database=NEO4J_DATABASE if NEO4J_DATABASE else None
         )
+        graphiti = Graphiti(graph_driver=driver)
 
         try:
             await graphiti.build_indices_and_constraints()
@@ -365,6 +370,7 @@ def render_knowledge_graph():
     uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     user = os.getenv("NEO4J_USER", "neo4j")
     password = os.getenv("NEO4J_PASSWORD", "password")
+    database = os.getenv("NEO4J_DATABASE", "neo4j")
 
     cypher = """
     MATCH (n:Entity)-[r]->(m:Entity)
@@ -375,7 +381,7 @@ def render_knowledge_graph():
     try:
         # Use sync driver here completely independent of Graphiti's async driver
         driver = GraphDatabase.driver(uri, auth=(user, password))
-        with driver.session() as session:
+        with driver.session(database=database if database else None) as session:
             result = session.run(cypher)
 
             net = Network(

@@ -3,6 +3,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.live import Live
 from graphiti_core import Graphiti
+from graphiti_core.driver.neo4j_driver import Neo4jDriver
 from ingestion.fetch_cve_rss_data import fetch_critical_cve_data, fetch_security_rss_feeds
 from ingestion.graph_ingestion import ingest_cve_data, ingest_rss_feed
 from ingestion.rag_ingestion import build_rag_pipeline
@@ -11,11 +12,14 @@ from graphiti_rag_agent import AgentDependencies, agent
 async def main():
     console = Console()
     
-    graphiti = Graphiti(
+    # Initialize with explicit Neo4jDriver to handle Aura's routing issues
+    driver = Neo4jDriver(
         uri=os.getenv("NEO4J_URI"),
         user=os.getenv("NEO4J_USER"),
-        password=os.getenv("NEO4J_PASSWORD")
+        password=os.getenv("NEO4J_PASSWORD"),
+        database=os.getenv("NEO4J_DATABASE", "neo4j")
     )
+    graphiti = Graphiti(graph_driver=driver)
     
     try:
         await graphiti.build_indices_and_constraints()
